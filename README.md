@@ -20,7 +20,58 @@ Generate a new G-code file that traces the exact outer envelope of one or more i
 pip install .
 ```
 
-## CLI usage
+## CLI 
+### Command-line options
+- input_files
+    - One or more input G-code files to analyze.
+- o, --output
+    - Output G-code filename.
+    - Example: -o outline.nc
+- --hover-z
+    - Z height used while tracing the generated outline.
+    - Default: 1.0
+    - Example: --hover-z 1.0
+- --clearance-z
+    - Safe Z height used before rapid XY motion.
+    - Default: 5.0
+    - Example: --clearance-z 5.0
+- --feed-rate
+    - Feed rate for the generated outline path.
+    - Default: 1200.0
+    - Example: --feed-rate 1200
+- --tool-radius
+    - Radius used to compute the swept cutter envelope.
+    - Use 0.0 for the programmed toolpath centerline envelope.
+    - Use the actual cutter radius for the physical tool sweep envelope.
+    - Default: 0.0
+    - Example: --tool-radius 3.0
+- --include-rapids
+    - If set, includes G0 rapid moves in the envelope calculation.
+    - Usually this should be left off.
+    - Example: --include-rapids
+- --cut-z-max
+    - Includes only segments whose average Z is less than or equal to this value.
+    - Useful for excluding travel moves above the stock.
+    - Default: 0.0
+    - Example: --cut-z-max 0.0
+- --arc-segment-deg
+    - Angular step in degrees used to approximate arcs (G2 / G3) as line segments.
+    - Smaller values produce more accurate geometry and more points.
+    - Default: 3.0
+    - Example: --arc-segment-deg 2.0
+- --simplify-tol
+    - Simplification tolerance applied to the final outline polygon.
+    - Lower values preserve more detail.
+    - Higher values reduce point count.
+    - Default: 0.01
+    - Example: --simplify-tol 0.02
+- --units
+    - Output units for the generated G-code.
+    - Choices: mm, inch
+    - Default: mm
+    - Example: 
+
+### Usage
 ```bash
 bamgcode input1.nc input2.nc -o outline.nc --hover-z 1.0 --clearance-z 5.0 --feed-rate 1200
 ```
