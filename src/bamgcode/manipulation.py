@@ -196,14 +196,22 @@ def segment_is_included(
     return True
 
 
-def build_toolpath_envelope(
+def _sort_polygons(polygons: List[Polygon]) -> List[Polygon]:
+    def key(poly: Polygon):
+        minx, miny, maxx, maxy = poly.bounds
+        return (miny, minx, -poly.area)
+
+    return sorted(polygons, key=key)
+
+
+def build_toolpath_envelopes(
     segments: List[Segment],
     tool_radius: float = 0.0,
     include_rapids: bool = False,
     cut_z_max: Optional[float] = 0.0,
     simplify_tol: float = 0.01,
     round_joins: bool = True,
-) -> Polygon:
+) -> List[Polygon]:
     geoms = []
 
     for seg in segments:
@@ -233,21 +241,26 @@ def build_toolpath_envelope(
 
     envelope = unary_union(envelope)
 
-    if isinstance(envelope, MultiPolygon):
-        envelope = max(envelope.geoms, key=lambda g: g.area)
-
     if simplify_tol > 0:
         envelope = envelope.simplify(simplify_tol, preserve_topology=True)
-        if isinstance(envelope, MultiPolygon):
-            envelope = max(envelope.geoms, key=lambda g: g.area)
 
-    if not isinstance(envelope, Polygon):
-        raise ValueError("Envelope geometry did not resolve to a Polygon.")
+    if isinstance(envelope, Polygon):
+        polygons = [envelope]
+    elif isinstance(envelope, MultiPolygon):
+        polygons = list(envelope.geoms)
+    else:
+        raise ValueError("Envelope geometry did not resolve to Polygon/MultiPolygon.")
 
-    return envelope
+    polygons = [p for p in polygons if not p.is_empty and p.area > 0]
+    if not polygons:
+        raise ValueError("No valid envelope polygons were produced.")
+
+    polygons = _remove_contained_polygons(polygons)
+
+    return polygons
 
 
-def lines_to_envelope_polygon(
+def lines_to_envelope_polygons(
     lines: List[str],
     tool_radius: float = 0.0,
     include_rapids: bool = False,
@@ -255,9 +268,9 @@ def lines_to_envelope_polygon(
     arc_segment_deg: float = 3.0,
     simplify_tol: float = 0.01,
     round_joins: bool = True,
-) -> Polygon:
+) -> List[Polygon]:
     segments = parse_gcode_to_segments(lines, arc_segment_deg=arc_segment_deg)
-    return build_toolpath_envelope(
+    return build_toolpath_envelopes(
         segments=segments,
         tool_radius=tool_radius,
         include_rapids=include_rapids,
@@ -265,3 +278,31 @@ def lines_to_envelope_polygon(
         simplify_tol=simplify_tol,
         round_joins=round_joins,
     )
+
+
+def _polygon_shell(poly: Polygon) -> Polygon:
+    return Polygon(poly.exterior)
+
+
+def _remove_contained_polygons(
+    polygons: List[Polygon], containment_tol: float = 0.001
+) -> List[Polygon]:
+    """
+    Remove polygons that are contained within a larger polygon.
+    Keeps only top-level outer shells.
+    """
+    shells = [_polygon_shell(p) for p in polygons]
+    shells.sort(key=lambda p: p.area, reverse=True)
+
+    kept: List[Polygon] = []
+    for poly in shells:
+        representative = poly.representative_point()
+        is_contained = False
+        for bigger in kept:
+            if bigger.buffer(containment_tol).contains(representative):
+                is_contained = True
+                break
+        if not is_contained:
+            kept.append(poly)
+
+    return _sort_polygons(kept)

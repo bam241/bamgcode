@@ -3,8 +3,8 @@ from .manipulation import (
     MachineState,
     Segment,
     parse_gcode_to_segments,
-    build_toolpath_envelope,
-    lines_to_envelope_polygon,
+    build_toolpath_envelopes,
+    lines_to_envelope_polygons,
 )
 
 __all__ = [
@@ -14,8 +14,8 @@ __all__ = [
     "MachineState",
     "Segment",
     "parse_gcode_to_segments",
-    "build_toolpath_envelope",
-    "lines_to_envelope_polygon",
+    "build_toolpath_envelopes",
+    "lines_to_envelope_polygons",
 ]
 
 __version__ = "0.1.0"

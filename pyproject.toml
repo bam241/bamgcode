@@ -3,7 +3,7 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gcode-envelope"
+name = "bamgcode"
 version = "0.1.0"
 description = "Generate a G-code hover outline from the exact toolpath envelope of one or more G-code files."
 readme = "README.md"
@@ -26,7 +26,7 @@ Homepage = "https://example.com"
 Repository = "https://example.com/repo"
 
 [project.scripts]
-gcode-envelope = "gcode_envelope.cli:main"
+bamgcode = "bamgcode.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

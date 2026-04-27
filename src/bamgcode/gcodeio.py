@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import List
+from typing import Iterable, List
 
 from shapely.geometry import Polygon
 
@@ -31,7 +31,7 @@ def _fmt(v: float) -> str:
 
 
 def write_outline_gcode(
-    polygon: Polygon,
+    polygons: Iterable[Polygon],
     output_file: str | Path,
     hover_z: float = 1.0,
     clearance_z: float = 5.0,
@@ -40,9 +40,9 @@ def write_outline_gcode(
     spindle_off: bool = True,
     program_end: str = "M30",
 ) -> None:
-    coords = list(polygon.exterior.coords)
-    if len(coords) < 2:
-        raise ValueError("Polygon has too few exterior coordinates to write G-code.")
+    polygons = [p for p in polygons if not p.is_empty]
+    if not polygons:
+        raise ValueError("No polygons supplied to write_outline_gcode().")
 
     lines = []
     lines.append("%")
@@ -54,23 +54,30 @@ def write_outline_gcode(
     if spindle_off:
         lines.append("M5")
 
-    sx, sy = coords[0]
     lines.append(f"G0 Z{_fmt(clearance_z)}")
-    lines.append(f"G0 X{_fmt(sx)} Y{_fmt(sy)}")
-    lines.append(f"G1 Z{_fmt(hover_z)} F{_fmt(feed_rate)}")
 
-    first_feed = True
-    for x, y in coords[1:]:
-        if first_feed:
-            lines.append(f"G1 X{_fmt(x)} Y{_fmt(y)} F{_fmt(feed_rate)}")
-            first_feed = False
-        else:
-            lines.append(f"G1 X{_fmt(x)} Y{_fmt(y)}")
+    for polygon in polygons:
+        coords = list(polygon.exterior.coords)
+        if len(coords) < 2:
+            continue
 
-    if coords[0] != coords[-1]:
-        lines.append(f"G1 X{_fmt(sx)} Y{_fmt(sy)}")
+        sx, sy = coords[0]
+        lines.append(f"G0 X{_fmt(sx)} Y{_fmt(sy)}")
+        lines.append(f"G1 Z{_fmt(hover_z)} F{_fmt(feed_rate)}")
 
-    lines.append(f"G0 Z{_fmt(clearance_z)}")
+        first_feed = True
+        for x, y in coords[1:]:
+            if first_feed:
+                lines.append(f"G1 X{_fmt(x)} Y{_fmt(y)} F{_fmt(feed_rate)}")
+                first_feed = False
+            else:
+                lines.append(f"G1 X{_fmt(x)} Y{_fmt(y)}")
+
+        if coords[0] != coords[-1]:
+            lines.append(f"G1 X{_fmt(sx)} Y{_fmt(sy)}")
+
+        lines.append(f"G0 Z{_fmt(clearance_z)}")
+
     lines.append(program_end)
     lines.append("%")
 

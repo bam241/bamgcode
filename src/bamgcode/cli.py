@@ -3,12 +3,12 @@ from __future__ import annotations
 import argparse
 
 from .gcodeio import read_multiple_gcode_files, write_outline_gcode
-from .manipulation import lines_to_envelope_polygon
+from .manipulation import lines_to_envelope_polygons
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="gcode-envelope",
+        prog="bamgcode",
         description="Generate a hover G-code file following the exact outer toolpath envelope.",
     )
     parser.add_argument("input_files", nargs="+", help="Input G-code files")
@@ -34,7 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--cut-z-max",
         type=float,
         default=0.0,
-        help="Include only segments whose average Z is <= this value; use a large number to include more",
+        help="Include only segments whose average Z is <= this value",
     )
     parser.add_argument(
         "--arc-segment-deg",
@@ -63,7 +63,7 @@ def main() -> None:
 
     lines = read_multiple_gcode_files(args.input_files)
 
-    polygon = lines_to_envelope_polygon(
+    polygons = lines_to_envelope_polygons(
         lines=lines,
         tool_radius=args.tool_radius,
         include_rapids=args.include_rapids,
@@ -73,7 +73,7 @@ def main() -> None:
     )
 
     write_outline_gcode(
-        polygon=polygon,
+        polygons=polygons,
         output_file=args.output,
         hover_z=args.hover_z,
         clearance_z=args.clearance_z,
